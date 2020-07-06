@@ -13,6 +13,10 @@ Laden sie den Workspace yingtan_20ueb9.RData.
 ```{r}
 library(tidyverse)
 load("data/yingtan_20_ueb9.Rdata")
+
+# Koordinatensystem anpassen
+proj4string(terrain) <- CRS("+proj=utm +zone=50 +ellps=WGS84 +datum=WGS84")
+proj4string(ljz) <- proj4string(terrain)
 ```
 
 ##Aufgabe 22. Inverse Distance Weighting
@@ -52,11 +56,11 @@ spplot(IDW, "var1.pred",
        ylab="North")
 
 #Leave-one-out-Cross-Validation
-LOOCV <- gstat::krige.cv(Ca_exch ~ 1,
+idw_LOOCV <- gstat::krige.cv(Ca_exch ~ 1,
                   ljz)
 
-bubble(LOOCV, "residual",
-       main = "Residuen der LOOCV-Analyse\n (Inverse Distance Weighting",
+bubble(idw_LOOCV, "residual",
+       main = "Residuen der LOOCV-Analyse\n (Inverse Distance Weighting)",
        scales=list(tick.number=4, alternating=1),
        xlab="East",
        ylab="North")
@@ -66,8 +70,8 @@ rmse <- function(x,y) {
   sqrt(mean((x-y)^2))
 }
 
-rmse(x = LOOCV$var1.pred,
-     y = LOOCV$observed)                     
+idw_rmse <- rmse(x = LOOCV$var1.pred,
+                 y = LOOCV$observed)                     
 ```
 
 
@@ -86,23 +90,23 @@ a) Leiten Sie für die Residuen der Regression aus Aufgabe 21 ein geeignetes Var
 Erklären Sie die Unterschiede in knappen Worten. (2 Punkte)
 ```{r}
 #Variogram aus dem Regressionsmodell aus 21
-variomodel <- variogram(Ca_exch ~ yingtan_elevation + SAGAWI,
-                        data = ljz,
-                        cutoff = 2202,
-                        width = 150)
+lr_variomodel <- variogram(Ca_exch ~ yingtan_elevation + SAGAWI,
+                           data = ljz,
+                           cutoff = 2202,
+                           width = 150)
 
 m <- vgm(model = "Exp",
          cutoff = 2202)
 
-fvariomodel <- fit.variogram(variomodel,
-                             model = m,
-                             fit.method = 7)
+lr_fvariomodel <- fit.variogram(variomodel,
+                                model = m,
+                                fit.method = 7)
 
-plot(variomodel,
-     model = fvariomodel,
+plot(lr_variomodel,
+     model = lr_fvariomodel,
      cutoff = 2202,
      ylim = c(0, 150),
-     main = "Variogrammmodell der austauschbaren Ca-Ionen")
+     main = "Variogrammmodell der austauschbaren Ca-Ionen\n(lineare Regression)")
 
 ```
 Modell bezogen auf die räumliche Nähe
@@ -117,33 +121,87 @@ range: 141.89 -> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche 
 
 b) Wenden Sie die Methode krige entsprechend des KED an und interpolieren Sie die Konzentration der Ca-Ionen auf die Rasterzellen des Objekts „terrain“. Ermitteln Sie anschließend den RMSE dieser Methode. (2 Punkte)
 ```{r}
-#Universal Kriging
-interpol_Ca <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
-                     ljz, 
-                     terrain,
-                     model = fvariomodel)
+#Universal Kriging = KED
+uk <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
+            ljz, 
+            terrain,
+            model = lr_fvariomodel)
 
-plot(interpol_Ca)
+plot(uk)
 
 #Leave-one-out-Cross-Validation
-LOOCV2 <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
-                  ljz)
+ukLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
+                           ljz,
+                           model = lr_fvariomodel)
 
-bubble(LOOCV2, "residual",
-       main = "Residuen der LOOCV-Analyse\n (Inverse Distance Weighting",
+bubble(ukLOOCV, "residual",
+       main = "Residuen der LOOCV-Analyse\n (Universal Kriging)",
        scales=list(tick.number=4, 
                    alternating=1),
        xlab="East",
        ylab="North")
 #RMSE
-rmse(x = LOOCV2$var1.pred,
-     y = LOOCV2$observed) 
+uk_rmse <- rmse(x = ukLOOCV$var1.pred,
+                y = ukLOOCV$observed) 
 ```
 
 c) Vergleichen Sie das KED-Ergebnis mit den Resultaten von MLR, OK und IDW. Für welches Interpolationsverfahren würden Sie sich entscheiden? Begründen Sie ihre Wahl in ein, zwei Sätzen. (3 Punkte)
 ```{r}
+##Multiple lineare Regression##
+mlr <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
+                     ljz, 
+                     terrain)
+#Leave-one-out-Cross-Validation
+mlrLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
+                           ljz)
 
+#RMSE
+mlr_rmse <- rmse(x = mlrLOOCV$var1.pred,
+                 y = mlrLOOCV$observed) 
+
+##Ordinary Kriging##
+#Variogramm Ordanary Kriging
+ok_variogram <- variogram(Ca ~ EAST + NORTH,
+                           data = ljz,
+                           alpha = c(0, 45, 90, 135),
+                           cutoff = 4400,
+                           width = 150)
+#Modell zum Variogramm
+ok_fvariogram <- fit.variogram(ok_variogram, 
+                               vgm(model = "Sph"))
+#Ordinary Kriging
+ok <- gstat::krige(Ca ~ 1, 
+                   ljz, terrain, 
+                   model = ok_fvariogram)
+
+#Leave-one-out-Cross-Validation
+okLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
+                           ljz,
+                           model = ok_fvariogram)
+
+#RMSE
+ok_rmse <- rmse(x = okLOOCV$var1.pred,
+                y = okLOOCV$observed) 
+
+##Inverse Distance weighting##
+IDW <- krige(Ca_exch~1, 
+             locations = ljz,
+             newdata = terrain)
+
+#Leave-one-out-Cross-Validation
+idwLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
+                           ljz)
+
+#RMSE
+idw_rmse <- rmse(x = idwLOOCV$var1.pred,
+                 y = idwLOOCV$observed) 
+
+idw_rmse
+uk_rmse
+ok_rmse
+mlr_rmse
 ```
+Der RMSE ist je für das OK und KED (9,3; 9,299), sowie für das IDW und das Kriging mittels des linearen Regressionsmodells (10,41) gleich/sehr ähnlich. Der RMSE sollte möglichst klein sein, da er angibt, wie groß die berechneten Werte von den tatsächlichen unterscheiden. Demnach istt für die Vorhersage der austauschbaren Ca-Ionen in Yingtan das Ordinary Kriging und das Universal Kriging/Kriging with external Drift etwas genauer als das lineare Regressionsmodell und das Inverse-Distance-Weighting.
 
 ##Aufgabe 24. Ergebnisexport
 a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
