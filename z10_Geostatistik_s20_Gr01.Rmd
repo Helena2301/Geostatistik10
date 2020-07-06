@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 ```
 
 Laden sie den Workspace yingtan_20ueb9.RData.
@@ -201,7 +201,7 @@ Der RMSE ist je für das OK und KED (9,3; 9,299), sowie für das IDW und das Kri
 a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
 (1 Punkte)
 ```{r}
-"rgdal_show_exportToProj4_warnings"="none"
+rgdal_show_exportToProj4_warnings="none"
 library(rgdal)
 writeGDAL(uk, "data/PrognoseCaexch.tif")
 ```
