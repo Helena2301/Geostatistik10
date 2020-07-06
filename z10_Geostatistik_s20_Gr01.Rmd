@@ -1,0 +1,150 @@
+---
+title: "Aufgabe 10"
+author: "Gruppe 01"
+date: "3 7 2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Laden sie den Workspace yingtan_20ueb9.RData.
+```{r}
+library(tidyverse)
+load("data/yingtan_20_ueb9.Rdata")
+```
+
+##Aufgabe 22. Inverse Distance Weighting
+Deterministische Modelle sind bei räumlichen Interpolationsfragen äußerst beliebt, weil sie verhältnismäßig leicht angewendet werden können. Ähnlich der meisten räumlichen Prognosemodelle basiert auch das Inverse Distance Weighting (IDW) auf einem gewichteten Mittel der vorhandenen Messwerte.
+Allerdings beruht die Berechnung der Gewichte nicht auf stochastischen Überlegungen, sondern einzig auf der subjektiven Wahl eines Parameters β:
+z( x0)=
+Σi
+=1
+n
+di − IDP∗z(xi)
+Σi
+=1
+n
+di
+−IDP
+a) Laden Sie den oben genannten Workspace in Ihrem Markdown Skript und führen Sie mit Hilfe der krige-Funktion eine IDW-Vorhersage der Ca- Ionen durch. Nutzen Sie das Objekt „terrain“ des geladenen Workspace als Ziel-Grid und plotten Sie ihr Ergebnis in gewohnt aussagekräftiger Manier.
+Ermitteln Sie außerdem den RMSE dieser Methode, indem Sie eine LOOKreuzvalidierung durchführen. (2 Punkte)
+```{r}
+#Inverse-Distance-Weighting
+library(gstat)
+IDW <- krige(Ca_exch~1, 
+             locations = ljz,
+             newdata = terrain) 
+
+#Darstellung
+library(sp)
+library(RColorBrewer)
+mycolor <- colorRampPalette(brewer.pal(n=9, name = "Greys"))(20)
+
+library(lattice)
+mylayout <- list(col.pixels = mycolor)
+spplot(IDW, "var1.pred",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Inverse Distance Weighting",
+       #col.regions=mycolor,
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
+
+#Leave-one-out-Cross-Validation
+LOOCV <- gstat::krige.cv(Ca_exch ~ 1,
+                  ljz)
+
+bubble(LOOCV, "residual",
+       main = "Residuen der LOOCV-Analyse\n (Inverse Distance Weighting",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
+
+# RMSE
+rmse <- function(x,y) {
+  sqrt(mean((x-y)^2))
+}
+
+rmse(x = LOOCV$var1.pred,
+     y = LOOCV$observed)                     
+```
+
+
+##Aufgabe 23. Kriging with External Drift
+Der Ansatz des Ordinary Kriging (OK) berücksichtigt zwar autokorrelatives Verhalten der Zielgröße im Raum, deterministische Trends bleiben jedoch außen vor. Das Verfahren der Multiplen Linearen Regression (MLR) versucht
+die abhängige Variable anhand additiv zusammenwirkender Kovariablen abzubilden ohne jedoch mögliche räumliche Zusammenhänge innerhalb der Zielgröße zu verarbeiten. Eine verbreitete Methode, die beide Aspekte kombiniert, ist das Regression Kriging (RK) oder auch Kriging with External Drift (KED):
+z ( x0)= ^ m(x0)+ ^e( x0)=Σk
+=0
+p
+βk qk ( x0)+Σ
+i =1
+n
+λi e (x0)
+
+a) Leiten Sie für die Residuen der Regression aus Aufgabe 21 ein geeignetes Variogrammmodell ab. Vergleichen Sie die Charakteristik dieses Modells mit dem autokorrelativen Verhalten der Original-Zielgröße (s. Aufgabe 12).
+Erklären Sie die Unterschiede in knappen Worten. (2 Punkte)
+```{r}
+#Variogram aus dem Regressionsmodell aus 21
+variomodel <- variogram(Ca_exch ~ yingtan_elevation + SAGAWI,
+                        data = ljz,
+                        cutoff = 2202,
+                        width = 150)
+
+m <- vgm(model = "Exp",
+         cutoff = 2202)
+
+fvariomodel <- fit.variogram(variomodel,
+                             model = m,
+                             fit.method = 7)
+
+plot(variomodel,
+     model = fvariomodel,
+     cutoff = 2202,
+     ylim = c(0, 150),
+     main = "Variogrammmodell der austauschbaren Ca-Ionen")
+
+```
+Modell bezogen auf die räumliche Nähe
+sill: 117.75 
+range: 293.96
+nugget: 50
+
+Der Nugget ist gleich geblieben.
+
+sill: 109.24
+range: 141.89 -> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche Höhenlage haben, ähneln sich auch stark im Wert für die austauschbaren Ca-Ionen.
+
+b) Wenden Sie die Methode krige entsprechend des KED an und interpolieren Sie die Konzentration der Ca-Ionen auf die Rasterzellen des Objekts „terrain“. Ermitteln Sie anschließend den RMSE dieser Methode. (2 Punkte)
+```{r}
+#Universal Kriging
+interpol_Ca <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
+                     ljz, 
+                     terrain,
+                     model = fvariomodel)
+
+plot(interpol_Ca)
+
+#Leave-one-out-Cross-Validation
+LOOCV2 <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
+                  ljz)
+
+bubble(LOOCV2, "residual",
+       main = "Residuen der LOOCV-Analyse\n (Inverse Distance Weighting",
+       scales=list(tick.number=4, 
+                   alternating=1),
+       xlab="East",
+       ylab="North")
+#RMSE
+rmse(x = LOOCV2$var1.pred,
+     y = LOOCV2$observed) 
+```
+
+c) Vergleichen Sie das KED-Ergebnis mit den Resultaten von MLR, OK und IDW. Für welches Interpolationsverfahren würden Sie sich entscheiden? Begründen Sie ihre Wahl in ein, zwei Sätzen. (3 Punkte)
+```{r}
+
+```
+
+##Aufgabe 24. Ergebnisexport
+a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
+(1 Punkte)
