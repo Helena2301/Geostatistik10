@@ -195,7 +195,7 @@ uk_rmse
 ok_rmse
 mlr_rmse
 ```
-Der RMSE ist je für das OK und KED (9,3; 9,299), sowie für das IDW und das Kriging mittels des linearen Regressionsmodells (10,41) gleich/sehr ähnlich. Der RMSE sollte möglichst klein sein, da er angibt, wie groß die berechneten Werte von den tatsächlichen unterscheiden. Demnach istt für die Vorhersage der austauschbaren Ca-Ionen in Yingtan das Ordinary Kriging und das Universal Kriging/Kriging with external Drift etwas genauer als das lineare Regressionsmodell und das Inverse-Distance-Weighting.
+Der RMSE ist je für das OK und KED (9,3; 9,299), sowie für das IDW und das Kriging mittels des linearen Regressionsmodells (10,41) gleich/sehr ähnlich. Der RMSE sollte möglichst klein sein, da er angibt, wie groß die berechneten Werte von den tatsächlichen unterscheiden. Demnach istt für die Vorhersage der austauschbaren Ca-Ionen in Yingtan das Ordinary Kriging und das Universal Kriging/Kriging with external Drift etwas genauer als das lineare Regressionsmodell und das Inverse-Distance-Weighting. Da das Universal Kriging den besten RMSE-Wert liefert, ist dies in diesem Beispiel das beste Interpolationsverfahren.
 
 ##Aufgabe 24. Ergebnisexport
 a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
