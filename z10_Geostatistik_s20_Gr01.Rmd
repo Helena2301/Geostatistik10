@@ -37,7 +37,7 @@ IDW <- krige(Ca_exch~1,
 library(lattice)
 
 spplot(IDW, "var1.pred",
-       main = "Vorhergesagte Ca-Ionenkonzentration\n (Inverse Distance Weighting",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Inverse Distance Weighting)",
        scales=list(tick.number=4, alternating=1),
        xlab="East",
        ylab="North")
@@ -81,6 +81,7 @@ m <- vgm(model = "Exp",
 lr_fvariomodel <- fit.variogram(lr_variomodel,
                                 model = m,
                                 fit.method = 7)
+lr_fvariomodel
 
 plot(lr_variomodel,
      model = lr_fvariomodel,
@@ -92,12 +93,11 @@ plot(lr_variomodel,
 Modell bezogen auf die räumliche Nähe
 sill: 117.75 
 range: 293.96
-nugget: 50
 
-Der Nugget ist gleich geblieben.
-
+Lineares Regressionsmodell
 sill: 109.24
-range: 141.89 -> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche Höhenlage haben, ähneln sich auch stark im Wert für die austauschbaren Ca-Ionen.
+range: 141.89 
+-> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche Höhenlage haben, ähneln sich auch stark im Wert für die austauschbaren Ca-Ionen. Da die range noch kleiner ist, als bei dem Modell aus Aufgabe 12, müssen die Werte des Höhenmodells und des SAGAWI vom Probeentnahmeort und der zu berechneten Stelle nahezu gleich sein, um eine geeignete Aussage über den Ca_exch Wert treffen zu können.
 
 b) Wenden Sie die Methode krige entsprechend des KED an und interpolieren Sie die Konzentration der Ca-Ionen auf die Rasterzellen des Objekts „terrain“. Ermitteln Sie anschließend den RMSE dieser Methode. (2 Punkte)
 ```{r}
