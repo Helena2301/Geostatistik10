@@ -166,7 +166,7 @@ ok_rmse <- rmse(x = okLOOCV$var1.pred,
                 y = okLOOCV$observed) 
 
 ##Inverse Distance weighting##
-IDW <- krige(Ca_exch~1, 
+IDW <- krige(Ca_exch ~ 1, 
              locations = ljz,
              newdata = terrain)
 
