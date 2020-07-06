@@ -15,23 +15,15 @@ library(tidyverse)
 load("data/yingtan_20_ueb9.Rdata")
 
 # Koordinatensystem anpassen
+library(sp)
 proj4string(terrain) <- CRS("+proj=utm +zone=50 +ellps=WGS84 +datum=WGS84")
 proj4string(ljz) <- proj4string(terrain)
 ```
 
 ##Aufgabe 22. Inverse Distance Weighting
 Deterministische Modelle sind bei räumlichen Interpolationsfragen äußerst beliebt, weil sie verhältnismäßig leicht angewendet werden können. Ähnlich der meisten räumlichen Prognosemodelle basiert auch das Inverse Distance Weighting (IDW) auf einem gewichteten Mittel der vorhandenen Messwerte.
-Allerdings beruht die Berechnung der Gewichte nicht auf stochastischen Überlegungen, sondern einzig auf der subjektiven Wahl eines Parameters β:
-z( x0)=
-Σi
-=1
-n
-di − IDP∗z(xi)
-Σi
-=1
-n
-di
-−IDP
+Allerdings beruht die Berechnung der Gewichte nicht auf stochastischen Überlegungen, sondern einzig auf der subjektiven Wahl eines Parameters.
+
 a) Laden Sie den oben genannten Workspace in Ihrem Markdown Skript und führen Sie mit Hilfe der krige-Funktion eine IDW-Vorhersage der Ca- Ionen durch. Nutzen Sie das Objekt „terrain“ des geladenen Workspace als Ziel-Grid und plotten Sie ihr Ergebnis in gewohnt aussagekräftiger Manier.
 Ermitteln Sie außerdem den RMSE dieser Methode, indem Sie eine LOOKreuzvalidierung durchführen. (2 Punkte)
 ```{r}
@@ -42,15 +34,10 @@ IDW <- krige(Ca_exch~1,
              newdata = terrain) 
 
 #Darstellung
-library(sp)
-library(RColorBrewer)
-mycolor <- colorRampPalette(brewer.pal(n=9, name = "Greys"))(20)
-
 library(lattice)
-mylayout <- list(col.pixels = mycolor)
+
 spplot(IDW, "var1.pred",
        main = "Vorhergesagte Ca-Ionenkonzentration\n (Inverse Distance Weighting",
-       #col.regions=mycolor,
        scales=list(tick.number=4, alternating=1),
        xlab="East",
        ylab="North")
@@ -70,21 +57,14 @@ rmse <- function(x,y) {
   sqrt(mean((x-y)^2))
 }
 
-idw_rmse <- rmse(x = LOOCV$var1.pred,
-                 y = LOOCV$observed)                     
+idw_rmse <- rmse(x = idw_LOOCV$var1.pred,
+                 y = idw_LOOCV$observed)                     
 ```
 
 
 ##Aufgabe 23. Kriging with External Drift
 Der Ansatz des Ordinary Kriging (OK) berücksichtigt zwar autokorrelatives Verhalten der Zielgröße im Raum, deterministische Trends bleiben jedoch außen vor. Das Verfahren der Multiplen Linearen Regression (MLR) versucht
-die abhängige Variable anhand additiv zusammenwirkender Kovariablen abzubilden ohne jedoch mögliche räumliche Zusammenhänge innerhalb der Zielgröße zu verarbeiten. Eine verbreitete Methode, die beide Aspekte kombiniert, ist das Regression Kriging (RK) oder auch Kriging with External Drift (KED):
-z ( x0)= ^ m(x0)+ ^e( x0)=Σk
-=0
-p
-βk qk ( x0)+Σ
-i =1
-n
-λi e (x0)
+die abhängige Variable anhand additiv zusammenwirkender Kovariablen abzubilden ohne jedoch mögliche räumliche Zusammenhänge innerhalb der Zielgröße zu verarbeiten. Eine verbreitete Methode, die beide Aspekte kombiniert, ist das Regression Kriging (RK) oder auch Kriging with External Drift (KED).
 
 a) Leiten Sie für die Residuen der Regression aus Aufgabe 21 ein geeignetes Variogrammmodell ab. Vergleichen Sie die Charakteristik dieses Modells mit dem autokorrelativen Verhalten der Original-Zielgröße (s. Aufgabe 12).
 Erklären Sie die Unterschiede in knappen Worten. (2 Punkte)
@@ -98,7 +78,7 @@ lr_variomodel <- variogram(Ca_exch ~ yingtan_elevation + SAGAWI,
 m <- vgm(model = "Exp",
          cutoff = 2202)
 
-lr_fvariomodel <- fit.variogram(variomodel,
+lr_fvariomodel <- fit.variogram(lr_variomodel,
                                 model = m,
                                 fit.method = 7)
 
@@ -127,7 +107,8 @@ uk <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
             terrain,
             model = lr_fvariomodel)
 
-plot(uk)
+plot(uk,
+     main = "Vorhersage durch Universal Kriging")
 
 #Leave-one-out-Cross-Validation
 ukLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
@@ -149,8 +130,9 @@ c) Vergleichen Sie das KED-Ergebnis mit den Resultaten von MLR, OK und IDW. Für
 ```{r}
 ##Multiple lineare Regression##
 mlr <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
-                     ljz, 
-                     terrain)
+             ljz, 
+             terrain)
+
 #Leave-one-out-Cross-Validation
 mlrLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
                            ljz)
@@ -161,16 +143,16 @@ mlr_rmse <- rmse(x = mlrLOOCV$var1.pred,
 
 ##Ordinary Kriging##
 #Variogramm Ordanary Kriging
-ok_variogram <- variogram(Ca ~ EAST + NORTH,
-                           data = ljz,
-                           alpha = c(0, 45, 90, 135),
-                           cutoff = 4400,
-                           width = 150)
+ok_variogram <- variogram(Ca_exch ~ EAST + NORTH,
+                          data = ljz,
+                          alpha = c(0, 45, 90, 135),
+                          cutoff = 4400,
+                          width = 150)
 #Modell zum Variogramm
 ok_fvariogram <- fit.variogram(ok_variogram, 
                                vgm(model = "Sph"))
 #Ordinary Kriging
-ok <- gstat::krige(Ca ~ 1, 
+ok <- gstat::krige(Ca_exch ~ 1, 
                    ljz, terrain, 
                    model = ok_fvariogram)
 
@@ -196,6 +178,18 @@ idwLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
 idw_rmse <- rmse(x = idwLOOCV$var1.pred,
                  y = idwLOOCV$observed) 
 
+#Vergleichsplot der Vorhersagen
+plot(uk,
+     main = "Vorhersage durch Universal Kriging")
+plot(mlr,
+     main = "Residuen des linearen Regressionsmodells")
+plot(ok,
+     main = "Vorhersage durch Ordinary Kriging")
+plot(IDW,
+     main = "Vorhersage durch Inverse-Distance-Weighting")
+
+
+#RMSEs
 idw_rmse
 uk_rmse
 ok_rmse
@@ -206,3 +200,9 @@ Der RMSE ist je für das OK und KED (9,3; 9,299), sowie für das IDW und das Kri
 ##Aufgabe 24. Ergebnisexport
 a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
 (1 Punkte)
+```{r}
+"rgdal_show_exportToProj4_warnings"="none"
+library(rgdal)
+writeGDAL(uk, "data/PrognoseCaexch.tif")
+```
+
