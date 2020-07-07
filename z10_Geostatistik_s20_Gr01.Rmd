@@ -58,7 +58,9 @@ rmse <- function(x,y) {
 }
 
 idw_rmse <- rmse(x = idw_LOOCV$var1.pred,
-                 y = idw_LOOCV$observed)                     
+                 y = idw_LOOCV$observed) 
+
+idw_rmse
 ```
 
 
@@ -90,14 +92,14 @@ plot(lr_variomodel,
      main = "Variogrammmodell der austauschbaren Ca-Ionen\n(lineare Regression)")
 
 ```
-Modell bezogen auf die räumliche Nähe
-sill: 117.75 
-range: 293.96
+Modell bezogen auf die räumliche Nähe aus Aufgabe 12 \
+sill: 117.75 \
+range: 293.96 \
 
-Lineares Regressionsmodell
-sill: 109.24
-range: 141.89 
--> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche Höhenlage haben, ähneln sich auch stark im Wert für die austauschbaren Ca-Ionen. Da die range noch kleiner ist, als bei dem Modell aus Aufgabe 12, müssen die Werte des Höhenmodells und des SAGAWI vom Probeentnahmeort und der zu berechneten Stelle nahezu gleich sein, um eine geeignete Aussage über den Ca_exch Wert treffen zu können.
+Lineares Regressionsmodell \
+sill: 109.24 \
+range: 141.89 \
+-> Orte, die einen sehr ähnlichen SAGAWI und eine sehr ähnliche Höhenlage haben, ähneln sich auch stark im Wert für die austauschbaren Ca-Ionen. Da die range noch kleiner ist, als bei dem Modell aus Aufgabe 12, müssen die Werte des Höhenmodells und des SAGAWI vom Probeentnahmeort und der zu berechneten Stelle nahezu gleich sein, um eine geeignete Aussage über den Ca_exch Wert treffen zu können. Bei leichten Abweichungen steigt die Varianz des Modells und die Genauigkeit einer Wertevorhersage für die austauschbaren Ca-Ionen sinkt. 
 
 b) Wenden Sie die Methode krige entsprechend des KED an und interpolieren Sie die Konzentration der Ca-Ionen auf die Rasterzellen des Objekts „terrain“. Ermitteln Sie anschließend den RMSE dieser Methode. (2 Punkte)
 ```{r}
@@ -107,8 +109,11 @@ uk <- krige(Ca_exch ~ yingtan_elevation + SAGAWI,
             terrain,
             model = lr_fvariomodel)
 
-plot(uk,
-     main = "Vorhersage durch Universal Kriging")
+spplot(uk, "var1.pred",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Kriging with external Drift)",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
 
 #Leave-one-out-Cross-Validation
 ukLOOCV <- gstat::krige.cv(Ca_exch ~ yingtan_elevation + SAGAWI,
@@ -123,7 +128,9 @@ bubble(ukLOOCV, "residual",
        ylab="North")
 #RMSE
 uk_rmse <- rmse(x = ukLOOCV$var1.pred,
-                y = ukLOOCV$observed) 
+                y = ukLOOCV$observed)
+
+uk_rmse
 ```
 
 c) Vergleichen Sie das KED-Ergebnis mit den Resultaten von MLR, OK und IDW. Für welches Interpolationsverfahren würden Sie sich entscheiden? Begründen Sie ihre Wahl in ein, zwei Sätzen. (3 Punkte)
@@ -179,15 +186,29 @@ idw_rmse <- rmse(x = idwLOOCV$var1.pred,
                  y = idwLOOCV$observed) 
 
 #Vergleichsplot der Vorhersagen
-plot(uk,
-     main = "Vorhersage durch Universal Kriging")
-plot(mlr,
-     main = "Residuen des linearen Regressionsmodells")
-plot(ok,
-     main = "Vorhersage durch Ordinary Kriging")
-plot(IDW,
-     main = "Vorhersage durch Inverse-Distance-Weighting")
+spplot(uk, "var1.pred",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Kriging with external Drift)",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
 
+spplot(mlr, "var1.pred",
+       main = "Residuen des linearen Regressionsmodells",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
+
+spplot(ok, "var1.pred",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Ordinary Kriging)",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
+
+spplot(IDW, "var1.pred",
+       main = "Vorhergesagte Ca-Ionenkonzentration\n (Inverse Distance Weighting)",
+       scales=list(tick.number=4, alternating=1),
+       xlab="East",
+       ylab="North")
 
 #RMSEs
 idw_rmse
@@ -195,13 +216,12 @@ uk_rmse
 ok_rmse
 mlr_rmse
 ```
-Der _RMSE_ ist je für das _OK_ und _KED_ (9,3; 9,299), sowie für das _IDW_ und das _Kriging_ mittels des _linearen Regressionsmodells_ (10,41) gleich/sehr ähnlich. Der _RMSE_ sollte möglichst klein sein, da er angibt, in welchem Maß sich die berechneten Werte von den tatsächlichen unterscheiden. Demnach ist für die Vorhersage der austauschbaren Ca-Ionen in Yingtan das _Ordinary Kriging_ und das _Universal Kriging/Kriging with external Drift_ etwas genauer als das _lineare Regressionsmodell_ und das _Inverse-Distance-Weighting_. Da das _Universal Kriging_ den besten RMSE-Wert liefert, ist dies in diesem Beispiel das beste Interpolationsverfahren.
+Der _RMSE_ ist je für das _OK_ und _KED_ (9,3; 9,299), sowie für das _IDW_ und das _Kriging_ mittels des _linearen Regressionsmodells_ (10,41) gleich/sehr ähnlich. Der _RMSE_ sollte möglichst klein sein, da er angibt, in welchem Maß sich die berechneten Werte von den tatsächlichen unterscheiden. Demnach ist für die Vorhersage der austauschbaren Ca-Ionen in Yingtan das _Ordinary Kriging_ und das _Universal Kriging/Kriging with external Drift_ etwas genauer als das _lineare Regressionsmodell_ und das _Inverse-Distance-Weighting_. Da das _Universal Kriging_, oder auch _Kriging with External Drift_ genannt, den besten RMSE-Wert liefert, ist dies in diesem Beispiel das beste Interpolationsverfahren.
 
 ## Aufgabe 24. Ergebnisexport
 a) Exportieren Sie ihr Prognoseergebnis aus Aufg. 23b) im GeoTIFF-Format.
 (1 Punkte)
 ```{r}
-rgdal_show_exportToProj4_warnings="none"
 library(rgdal)
 writeGDAL(uk, "data/PrognoseCaexch.tif")
 ```
